@@ -92,7 +92,10 @@ export const routes: Routes = [
               roles: ['ADMIN'],
               permissions: ['CREDIT_VIEW_ALL'],
             },
-            loadComponent: comingSoon,
+            loadComponent: () =>
+              import('./modules/admin/credits/UI/page/admin-credits/admin-credits.component').then(
+                (m) => m.AdminCreditsComponent,
+              ),
           },
           {
             path: 'tasas',
@@ -104,7 +107,10 @@ export const routes: Routes = [
               roles: ['ADMIN'],
               permissions: ['RATE_MANAGE'],
             },
-            loadComponent: comingSoon,
+            loadComponent: () =>
+              import('./modules/admin/interest-rates/UI/page/interest-rates/interest-rates.component').then(
+                (m) => m.InterestRatesComponent,
+              ),
           },
           {
             path: 'usuarios',

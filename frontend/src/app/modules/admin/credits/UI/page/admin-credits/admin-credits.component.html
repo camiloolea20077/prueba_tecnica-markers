@@ -1,0 +1,254 @@
+<!-- Encabezado -->
+<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h2 class="text-2xl font-bold tracking-tight text-surface-900">Bandeja de solicitudes</h2>
+    <p class="mt-1 text-sm text-surface-500">
+      Revisa cada solicitud, define la tasa efectiva anual y decide.
+    </p>
+  </div>
+  <p-button
+    icon="pi pi-refresh"
+    label="Actualizar"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="store.loading()"
+    (onClick)="store.refresh()"
+  />
+</div>
+
+<!-- Resumen -->
+<div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <button
+    type="button"
+    class="rounded-2xl bg-surface-950 p-5 text-left text-white transition hover:bg-surface-800"
+    (click)="onStatus('PENDING')"
+  >
+    <p
+      class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-surface-400"
+    >
+      <i class="pi pi-clock text-xs"></i> Por revisar
+    </p>
+    <p class="mt-2 text-3xl font-bold">{{ store.summary().pending }}</p>
+  </button>
+  <button
+    type="button"
+    class="rounded-2xl border border-surface-200 bg-surface-0 p-5 text-left transition hover:border-surface-400"
+    (click)="onStatus('APPROVED')"
+  >
+    <p
+      class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-surface-500"
+    >
+      <i class="pi pi-check-circle text-xs"></i> Aprobados
+    </p>
+    <p class="mt-2 text-3xl font-bold text-surface-900">{{ store.summary().approved }}</p>
+  </button>
+  <button
+    type="button"
+    class="rounded-2xl border border-surface-200 bg-surface-0 p-5 text-left transition hover:border-surface-400"
+    (click)="onStatus('REJECTED')"
+  >
+    <p
+      class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-surface-500"
+    >
+      <i class="pi pi-times-circle text-xs"></i> Rechazados
+    </p>
+    <p class="mt-2 text-3xl font-bold text-surface-900">{{ store.summary().rejected }}</p>
+  </button>
+  <button
+    type="button"
+    class="rounded-2xl border border-surface-200 bg-surface-0 p-5 text-left transition hover:border-surface-400"
+    (click)="onStatus('ALL')"
+  >
+    <p
+      class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-surface-500"
+    >
+      <i class="pi pi-list text-xs"></i> Total
+    </p>
+    <p class="mt-2 text-3xl font-bold text-surface-900">{{ store.summary().total }}</p>
+  </button>
+</div>
+
+<!-- Tabla -->
+<section class="mt-6 overflow-hidden rounded-2xl border border-surface-200 bg-surface-0">
+  <div
+    class="flex flex-col gap-3 border-b border-surface-100 p-4 lg:flex-row lg:items-center lg:justify-between"
+  >
+    <div class="overflow-x-auto">
+      <p-selectbutton
+        [options]="statusOptions()"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="onStatus($event)"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        size="small"
+      />
+    </div>
+    <p-iconfield class="lg:w-80">
+      <p-inputicon styleClass="pi pi-search" />
+      <input
+        pInputText
+        type="search"
+        [formControl]="search"
+        placeholder="Buscar por nombre o correo"
+        class="w-full"
+        aria-label="Buscar solicitante"
+      />
+    </p-iconfield>
+  </div>
+
+  <p-table
+    [value]="store.credits()"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="store.query().size"
+    [first]="store.first()"
+    [totalRecords]="store.totalRecords()"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [loading]="store.loading()"
+    [rowHover]="true"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first}–{last} de {totalRecords}"
+    [tableStyle]="{ 'min-width': '64rem' }"
+    dataKey="id"
+  >
+    <ng-template #header>
+      <tr>
+        <th>Solicitud</th>
+        <th>Solicitante</th>
+        <th class="text-right">Monto</th>
+        <th class="text-center">Plazo</th>
+        <th class="text-right">Tasa EA</th>
+        <th class="text-right">Cuota</th>
+        <th>Estado</th>
+        <th class="w-40 text-right">Acciones</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-c>
+      <tr class="cursor-pointer" (click)="openDetail(c)">
+        <td>
+          <p class="font-semibold text-surface-900">#{{ c.id }}</p>
+          <p class="text-xs text-surface-500">{{ c.createdAt | date: 'd MMM y, h:mm a' }}</p>
+        </td>
+        <td>
+          <p class="font-medium text-surface-900">{{ c.applicant.fullName }}</p>
+          <p class="text-xs text-surface-500">{{ c.applicant.email }}</p>
+        </td>
+        <td class="text-right font-medium tabular-nums text-surface-900">
+          {{ c.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+        </td>
+        <td class="text-center text-surface-600">{{ c.termMonths }} m</td>
+        @if (c.status === 'PENDING' || c.status === 'APPROVED') {
+          <td class="text-right tabular-nums">
+            {{ c.annualRate | number: '1.2-2' }} %
+            <span class="block text-[0.7rem] text-surface-400">
+              {{ c.estimated ? 'sugerida' : 'aplicada' }}
+            </span>
+          </td>
+          <td class="text-right tabular-nums">
+            {{ c.monthlyPayment | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+          </td>
+        } @else {
+          <td class="text-right text-surface-300">—</td>
+          <td class="text-right text-surface-300">—</td>
+        }
+        <td><app-credit-status-tag [status]="c.status" /></td>
+        <td class="text-right" (click)="$event.stopPropagation()">
+          <div class="flex justify-end gap-1">
+            @if (c.status === 'PENDING') {
+              @if (canApprove()) {
+                <p-button
+                  icon="pi pi-check"
+                  [rounded]="true"
+                  size="small"
+                  pTooltip="Aprobar"
+                  tooltipPosition="top"
+                  ariaLabel="Aprobar"
+                  (onClick)="openApprove(c)"
+                />
+              }
+              @if (canReject()) {
+                <p-button
+                  icon="pi pi-times"
+                  [rounded]="true"
+                  [outlined]="true"
+                  severity="danger"
+                  size="small"
+                  pTooltip="Rechazar"
+                  tooltipPosition="top"
+                  ariaLabel="Rechazar"
+                  (onClick)="openReject(c)"
+                />
+              }
+            }
+            <p-button
+              icon="pi pi-eye"
+              [rounded]="true"
+              [text]="true"
+              severity="secondary"
+              size="small"
+              pTooltip="Ver detalle"
+              tooltipPosition="top"
+              ariaLabel="Ver detalle"
+              (onClick)="openDetail(c)"
+            />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="8">
+          <div class="flex flex-col items-center px-6 py-14 text-center">
+            <span
+              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-100 text-surface-900"
+            >
+              <i class="pi pi-inbox text-xl"></i>
+            </span>
+            <p class="mt-4 font-semibold text-surface-900">
+              {{
+                store.query().q
+                  ? 'Sin resultados para la búsqueda'
+                  : 'No hay solicitudes en este estado'
+              }}
+            </p>
+            @if (store.query().q) {
+              <p-button
+                label="Limpiar búsqueda"
+                [text]="true"
+                severity="secondary"
+                styleClass="mt-2"
+                (onClick)="clearSearch()"
+              />
+            } @else if (store.query().status === 'PENDING') {
+              <p class="mt-1 text-sm text-surface-500">
+                ¡Todo al día! No hay solicitudes por revisar.
+              </p>
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<app-credit-detail-dialog
+  [(visible)]="detailVisible"
+  [credit]="selected()"
+  [showApplicant]="true"
+/>
+<app-approve-credit-dialog
+  [(visible)]="approveVisible"
+  [credit]="selected()"
+  (approved)="onApproved($event)"
+  (stale)="onStale($event)"
+/>
+<app-reject-credit-dialog
+  [(visible)]="rejectVisible"
+  [credit]="selected()"
+  (rejected)="onRejected($event)"
+  (stale)="onStale($event)"
+/>

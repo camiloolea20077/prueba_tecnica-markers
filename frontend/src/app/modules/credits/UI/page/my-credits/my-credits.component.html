@@ -136,18 +136,23 @@
             {{ c.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
           </td>
           <td class="text-center text-surface-600">{{ c.termMonths }} meses</td>
-          <td class="text-right tabular-nums">
-            {{ c.annualRate | number: '1.2-2' }} %
-            @if (c.estimated) {
-              <span class="block text-[0.7rem] text-surface-400">sugerida</span>
-            }
-          </td>
-          <td class="text-right tabular-nums">
-            {{ c.monthlyPayment | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
-            @if (c.estimated) {
-              <span class="block text-[0.7rem] text-surface-400">estimada</span>
-            }
-          </td>
+          @if (c.status === 'PENDING' || c.status === 'APPROVED') {
+            <td class="text-right tabular-nums">
+              {{ c.annualRate | number: '1.2-2' }} %
+              @if (c.estimated) {
+                <span class="block text-[0.7rem] text-surface-400">sugerida</span>
+              }
+            </td>
+            <td class="text-right tabular-nums">
+              {{ c.monthlyPayment | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+              @if (c.estimated) {
+                <span class="block text-[0.7rem] text-surface-400">estimada</span>
+              }
+            </td>
+          } @else {
+            <td class="text-right text-surface-300">—</td>
+            <td class="text-right text-surface-300">—</td>
+          }
           <td><app-credit-status-tag [status]="c.status" /></td>
           <td class="text-right" (click)="$event.stopPropagation()">
             <p-button

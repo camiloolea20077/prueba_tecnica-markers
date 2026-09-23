@@ -84,9 +84,7 @@ public class CreditService implements RequestCreditUseCase, SimulateCreditUseCas
                 ? command.annualRate()
                 : findTier(command.termMonths()).annualEffectiveRate();
         if (!policy.isRateAllowed(rate)) {
-            throw new CreditRuleException(String.format("La tasa efectiva anual debe estar entre %s %% y %s %%",
-                    policy.minAnnualRate().stripTrailingZeros().toPlainString(),
-                    policy.maxAnnualRate().stripTrailingZeros().toPlainString()));
+            throw new CreditRuleException(policy.rateRangeMessage());
         }
         return InterestCalculator.quote(command.amount(), command.termMonths(), rate, command.includeSchedule());
     }

@@ -36,6 +36,9 @@ public record Credit(Long id,
                      Instant createdAt,
                      Long version) {
 
+    public static final int MIN_REASON_LENGTH = 10;
+    public static final int MAX_REASON_LENGTH = 500;
+
     /**
      * Crea una solicitud nueva en estado {@link CreditStatus#PENDING}.
      *
@@ -79,6 +82,43 @@ public record Credit(Long id,
         return withStatus(CreditStatus.CANCELLED);
     }
 
+    /**
+     * Aprueba la solicitud con la tasa efectiva anual que define el analista y fija las condiciones
+     * definitivas (tasa mensual, cuota, intereses, total).
+     *
+     * @throws InvalidCreditStateException si ya no está pendiente
+     * @throws CreditRuleException         si la tasa está fuera de la política o el analista es el solicitante
+     */
+    public Credit approve(Long adminId, BigDecimal annualRate, CreditPolicy policy) {
+        requirePending("aprobar");
+        requireNotSelfDecision(adminId);
+        if (!policy.isRateAllowed(annualRate)) {
+            throw new CreditRuleException(policy.rateRangeMessage());
+        }
+        CreditQuote q = InterestCalculator.quote(amount, termMonths, annualRate, false);
+        return new Credit(id, applicant, amount, termMonths, suggestedAnnualRate, q.annualRate(), q.monthlyRate(),
+                q.monthlyPayment(), q.totalInterest(), q.totalPayable(), CreditStatus.APPROVED, null, adminId,
+                Instant.now(), createdAt, version);
+    }
+
+    /**
+     * Rechaza la solicitud; el motivo es obligatorio (10 a 500 caracteres).
+     *
+     * @throws InvalidCreditStateException si ya no está pendiente
+     * @throws CreditRuleException         si el motivo no es válido o el analista es el solicitante
+     */
+    public Credit reject(Long adminId, String reason) {
+        requirePending("rechazar");
+        requireNotSelfDecision(adminId);
+        String cleanReason = reason == null ? "" : reason.trim();
+        if (cleanReason.length() < MIN_REASON_LENGTH || cleanReason.length() > MAX_REASON_LENGTH) {
+            throw new CreditRuleException("El motivo del rechazo debe tener entre " + MIN_REASON_LENGTH + " y "
+                    + MAX_REASON_LENGTH + " caracteres");
+        }
+        return new Credit(id, applicant, amount, termMonths, suggestedAnnualRate, null, null, null, null, null,
+                CreditStatus.REJECTED, cleanReason, adminId, Instant.now(), createdAt, version);
+    }
+
     public boolean isOwnedBy(Long userId) {
         return applicant != null && Objects.equals(applicant.id(), userId);
     }
@@ -101,6 +141,13 @@ public record Credit(Long id,
     /** true si las condiciones de {@link #quote()} son una estimación (aún no aprobado). */
     public boolean isEstimated() {
         return status != CreditStatus.APPROVED;
+    }
+
+    /** Control de cuatro ojos: nadie decide sobre su propia solicitud. */
+    private void requireNotSelfDecision(Long adminId) {
+        if (isOwnedBy(adminId)) {
+            throw new CreditRuleException("No puedes decidir sobre tu propia solicitud de crédito");
+        }
     }
 
     private void requirePending(String action) {

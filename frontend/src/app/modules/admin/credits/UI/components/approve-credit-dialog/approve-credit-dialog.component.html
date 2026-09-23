@@ -1,0 +1,121 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: '44rem' }"
+  [breakpoints]="{ '768px': '95vw' }"
+>
+  <ng-template #header>
+    <div>
+      <p class="text-lg font-semibold text-surface-900">Aprobar crédito #{{ credit()?.id }}</p>
+      <p class="text-sm text-surface-500">Define la tasa efectiva anual con la que se otorga.</p>
+    </div>
+  </ng-template>
+
+  @if (credit(); as c) {
+    <div class="flex flex-col gap-5">
+      <!-- Solicitud -->
+      <div
+        class="grid grid-cols-1 gap-3 rounded-xl border border-surface-200 p-4 text-sm sm:grid-cols-3"
+      >
+        <div>
+          <p class="text-surface-500">Solicitante</p>
+          <p class="font-semibold text-surface-900">{{ c.applicant.fullName }}</p>
+          <p class="text-xs text-surface-500">{{ c.applicant.email }}</p>
+        </div>
+        <div>
+          <p class="text-surface-500">Monto</p>
+          <p class="font-semibold text-surface-900">
+            {{ c.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+          </p>
+        </div>
+        <div>
+          <p class="text-surface-500">Plazo</p>
+          <p class="font-semibold text-surface-900">{{ c.termMonths }} meses</p>
+        </div>
+      </div>
+
+      <!-- Tasa -->
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-3">
+          <label for="approve-rate" class="text-sm font-medium text-surface-700">
+            Tasa efectiva anual
+          </label>
+          <button
+            type="button"
+            class="text-xs font-medium text-surface-500 underline-offset-2 hover:text-surface-900 hover:underline"
+            (click)="useSuggested()"
+          >
+            Usar sugerida ({{ c.suggestedAnnualRate | number: '1.2-2' }} %)
+          </button>
+        </div>
+        <p-inputnumber
+          inputId="approve-rate"
+          [formControl]="rate"
+          suffix=" % EA"
+          [minFractionDigits]="0"
+          [maxFractionDigits]="2"
+          [step]="0.25"
+          [showButtons]="true"
+          buttonLayout="horizontal"
+          incrementButtonIcon="pi pi-plus"
+          decrementButtonIcon="pi pi-minus"
+          [fluid]="true"
+          [invalid]="rate.invalid && (rate.touched || rate.dirty)"
+          inputStyleClass="text-center !text-lg !font-semibold"
+        />
+        @if (catalog(); as cat) {
+          <small
+            [class]="
+              rate.invalid && (rate.touched || rate.dirty) ? 'text-red-500' : 'text-surface-400'
+            "
+          >
+            Permitida entre {{ cat.minAnnualRate | number: '1.0-2' }} % y
+            {{ cat.maxAnnualRate | number: '1.0-2' }} % EA (tope de usura).
+          </small>
+        }
+      </div>
+
+      <!-- Resultado -->
+      @if (rate.valid) {
+        <app-quote-summary [quote]="simulating() && !quote() ? null : quote()" />
+        @if (quote() && paymentDelta() !== 0) {
+          <p class="-mt-2 text-xs text-surface-500">
+            La cuota queda
+            <span class="font-semibold text-surface-900">
+              {{
+                (paymentDelta() > 0 ? paymentDelta() : -paymentDelta())
+                  | currency: 'COP' : 'symbol-narrow' : '1.0-0'
+              }}
+              {{ paymentDelta() > 0 ? 'por encima' : 'por debajo' }}
+            </span>
+            de la estimada con la tasa sugerida.
+          </p>
+        }
+      }
+
+      @if (serverError()) {
+        <p-message severity="error" icon="pi pi-times-circle" styleClass="w-full">
+          {{ serverError() }}
+        </p-message>
+      }
+    </div>
+  }
+
+  <ng-template #footer>
+    <p-button
+      label="Cancelar"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Aprobar crédito"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="rate.invalid"
+      (onClick)="confirm()"
+    />
+  </ng-template>
+</p-dialog>

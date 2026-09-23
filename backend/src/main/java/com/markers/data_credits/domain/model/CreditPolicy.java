@@ -34,4 +34,9 @@ public record CreditPolicy(BigDecimal minAmount,
                 && annualRate.compareTo(minAnnualRate) >= 0
                 && annualRate.compareTo(maxAnnualRate) <= 0;
     }
+
+    public String rateRangeMessage() {
+        return "La tasa efectiva anual debe estar entre " + minAnnualRate.stripTrailingZeros().toPlainString()
+                + " % y " + maxAnnualRate.stripTrailingZeros().toPlainString() + " %";
+    }
 }

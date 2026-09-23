@@ -1,13 +1,22 @@
 package com.markers.data_credits.infrastructure.adapter.out.persistence;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
 import com.markers.data_credits.domain.exception.CreditNotFoundException;
 import com.markers.data_credits.domain.model.Credit;
 import com.markers.data_credits.domain.model.CreditStatus;
+import com.markers.data_credits.domain.model.PageResult;
+import com.markers.data_credits.infrastructure.adapter.out.persistence.repository.CreditSpecifications;
 import com.markers.data_credits.domain.port.out.CreditRepositoryPort;
 import com.markers.data_credits.infrastructure.adapter.out.persistence.entity.CreditEntity;
 import com.markers.data_credits.infrastructure.adapter.out.persistence.mapper.CreditPersistenceMapper;
@@ -78,8 +87,36 @@ public class CreditPersistenceAdapter implements CreditRepositoryPort {
         return entity;
     }
 
+    @Override
+    public PageResult<Credit> search(CreditStatus status, String query, int page, int size) {
+        Specification<CreditEntity> spec = Specification.allOf(
+                CreditSpecifications.hasStatus(status),
+                CreditSpecifications.applicantMatches(query));
+        Page<CreditEntity> result = creditRepository.findAll(spec,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
+        return new PageResult<>(result.getContent().stream().map(mapper::toDomain).toList(),
+                result.getNumber(), result.getSize(), result.getTotalElements());
+    }
+
+    @Override
+    public Map<CreditStatus, Long> countByStatus() {
+        Map<CreditStatus, Long> counts = new EnumMap<>(CreditStatus.class);
+        for (Object[] row : creditRepository.countGroupedByStatus()) {
+            counts.put((CreditStatus) row[0], (Long) row[1]);
+        }
+        return counts;
+    }
+
+    /**
+     * Carga la entidad y verifica que nadie la haya modificado desde que se leyó el crédito
+     * (la versión del dominio debe coincidir con la almacenada).
+     */
     private CreditEntity existingEntity(Credit credit) {
-        return creditRepository.findWithUserById(credit.id())
+        CreditEntity entity = creditRepository.findWithUserById(credit.id())
                 .orElseThrow(() -> new CreditNotFoundException(credit.id()));
+        if (credit.version() != null && !credit.version().equals(entity.getVersion())) {
+            throw new ObjectOptimisticLockingFailureException(CreditEntity.class, credit.id());
+        }
+        return entity;
     }
 }

@@ -71,30 +71,30 @@ backend/src/main/java/com/markers/data_credits/
 │   ├── model/                      User, Role (code, name, permissions), RoleCodes, Permissions (constantes),
 │   │                               AuthToken, AuthSession ✔
 │   │                               Credit, InterestRateTier, CreditStatus (PENDING|APPROVED|REJECTED|CANCELLED), CreditPolicy, CreditApplicant, RateCatalog,
-│   │                               CreditQuote (resultado de cálculo), AmortizationRow ✔
+│   │                               CreditQuote (resultado de cálculo), AmortizationRow, PageResult ✔
 │   ├── service/                    InterestCalculator ✔ (Java puro: EA→mensual, cuota francesa, amortización)
 │   ├── exception/                  DomainException (abstracta), InvalidCredentialsException, InactiveUserException,
-│   │                               UserNotFoundException, CreditNotFoundException, InvalidCreditStateException, CreditRuleException ✔ ·
+│   │                               UserNotFoundException, CreditNotFoundException, InvalidCreditStateException, CreditRuleException, InterestRateTierNotFoundException ✔ ·
 │   │                               EmailAlreadyExistsException
 │   └── port/
 │       ├── in/                     Casos de uso (interfaces). Los Commands son records anidados en el puerto
 │       │                           (ej. AuthenticateUseCase.LoginCommand) y devuelven modelos de dominio.
 │       │                           AuthenticateUseCase, GetCurrentUserUseCase, RequestCreditUseCase, SimulateCreditUseCase,
-│       │                           QueryCreditUseCase, CancelCreditUseCase, QueryInterestRatesUseCase ✔ · DecideCreditUseCase, ManageUserUseCase
+│       │                           QueryCreditUseCase, CancelCreditUseCase, QueryInterestRatesUseCase, DecideCreditUseCase, SearchCreditsUseCase, ManageInterestRatesUseCase ✔ · ManageUserUseCase
 │       └── out/                    UserRepositoryPort (+findByIdForUpdate), PasswordEncoderPort, TokenProviderPort, CreditRepositoryPort, InterestRateTierRepositoryPort ✔
 ├── application/
-│   └── service/                    Implementan puertos in: AuthService, CreditService, InterestRateService ✔ · AdminCreditService, UserService
+│   └── service/                    Implementan puertos in: AuthService, CreditService, InterestRateService, AdminCreditService ✔ · UserService
 │                                   (@Transactional, @Cacheable, @CacheEvict aquí)
 └── infrastructure/
     ├── adapter/
     │   ├── in/web/
-    │   │   ├── controller/         AuthController, CreditController, InterestRateController ✔ · AdminCreditController, UserController
+    │   │   ├── controller/         AuthController, CreditController, InterestRateController, AdminCreditController, AdminInterestRateController ✔ · UserController
     │   │   ├── dto/in|out/         Request/Response records con validaciones (@NotNull, @Positive, @Min...)
     │   │   ├── mapper/             MapStruct dominio → DTO web (AuthWebMapper, CreditWebMapper ✔)
     │   │   └── support/            BlockingExecutor
     │   └── out/persistence/
     │       ├── entity/             UserEntity, RoleEntity, PermissionEntity, CreditEntity (@Version), InterestRateTierEntity ✔
-    │       ├── repository/         UserJpaRepository (@EntityGraph, @Lock), CreditJpaRepository, InterestRateTierJpaRepository ✔
+    │       ├── repository/         UserJpaRepository (@EntityGraph, @Lock), CreditJpaRepository (+Specifications), CreditSpecifications, InterestRateTierJpaRepository ✔
     │       ├── mapper/             entity → domain (UserPersistenceMapper, CreditPersistenceMapper ✔)
     │       └── UserPersistenceAdapter, CreditPersistenceAdapter, InterestRateTierPersistenceAdapter ✔
     ├── security/                   ✔ SecurityConfig, SecurityProperties, JwtTokenProvider, JwtAuthenticationManager,
@@ -162,10 +162,11 @@ Las tasas se guardan como **porcentaje** (ej. `24.5000` = 24,5 % EA).
 | GET | `/credits/{id}` | `CREDIT_VIEW_OWN` (dueño) o `CREDIT_VIEW_ALL` | detalle / estado (ajeno → 404) ✔ · caché en módulo 4 |
 | PATCH | `/credits/{id}/cancel` | `CREDIT_CANCEL_OWN` (dueño) | PENDING → CANCELLED (no se borra: queda trazabilidad) ✔ |
 | GET | `/interest-rates` | autenticado | tramos activos + EA mín/máx ✔ |
-| GET | `/admin/credits` | ADMIN + `CREDIT_VIEW_ALL` | todas las solicitudes (filtro `status`, paginado) |
-| PATCH | `/admin/credits/{id}/approve` | ADMIN + `CREDIT_APPROVE` | aprobar `{annualRate}` (EA %) — transaccional |
-| PATCH | `/admin/credits/{id}/reject` | ADMIN + `CREDIT_REJECT` | rechazar `{reason}` — transaccional |
-| POST/PUT/DELETE | `/admin/interest-rates[/{id}]` | ADMIN + `RATE_MANAGE` | CRUD de tramos |
+| GET | `/admin/credits?status=&q=&page=&size=` | ADMIN + `CREDIT_VIEW_ALL` | solicitudes paginadas (búsqueda por nombre/correo, Specifications) ✔ |
+| GET | `/admin/credits/summary` | ADMIN + `CREDIT_VIEW_ALL` | conteo por estado ✔ |
+| PATCH | `/admin/credits/{id}/approve` | ADMIN + `CREDIT_APPROVE` | aprobar `{annualRate}` (EA %) — transaccional + `@Version` (paralelo → 409) ✔ |
+| PATCH | `/admin/credits/{id}/reject` | ADMIN + `CREDIT_REJECT` | rechazar `{reason}` (10–500 caracteres) — transaccional ✔ |
+| GET/POST/PUT/DELETE | `/admin/interest-rates[/{id}]` | ADMIN + `RATE_MANAGE` | CRUD de tramos (activos sin superposición) ✔ |
 | GET/POST/PUT/DELETE | `/admin/users[/{id}]` | ADMIN + `USER_MANAGE` | CRUD de usuarios |
 
 Respuesta de crédito: `{id, applicant{id,fullName,email}, amount, termMonths, status, statusLabel, estimated, suggestedAnnualRate,
@@ -304,10 +305,15 @@ Reglas frontend:
 - [x] Probado con curl contra Postgres (incluye 5 solicitudes concurrentes → solo 1 aceptada)
 - Tests de controladores usan `@WebLayerTest` (support) para importar seguridad + mappers.
 
-**Backend · Módulo 3 — Administración de créditos**
-- [ ] Aprobar (EA) / rechazar con `@Transactional` + `@Version`
-- [ ] Listado admin filtrable y paginado
-- [ ] CRUD de tramos de tasa
+**Backend · Módulo 3 — Administración de créditos** ✔
+- [x] `Credit.approve(adminId, EA, policy)` / `reject(adminId, motivo)`; control de cuatro ojos (nadie decide su propia solicitud)
+- [x] `AdminCreditService` (DecideCreditUseCase + SearchCreditsUseCase), `@Transactional` por decisión
+- [x] Concurrencia: `@Version` + el adaptador compara la versión del dominio con la almacenada → `ObjectOptimisticLockingFailureException` → 409
+- [x] Búsqueda paginada con `CreditSpecifications` (estado + texto, sin parámetros nulos en SQL) y `@EntityGraph`
+- [x] `InterestRateTier.create(...)` valida contra la política; `InterestRateService` impide superposición entre tramos activos
+- [x] `AdminCreditController`, `AdminInterestRateController`; `PageResult` (dominio) → `PageResponse` (web)
+- [x] Tests: CreditDecision (12), AdminCreditService (7), InterestRateService (6), AdminCreditController (12) → **109 en total**
+- [x] curl contra Postgres: 2 aprobaciones simultáneas → 200 + 409
 
 **Backend · Módulo 4 — Caché EhCache**
 - [ ] ehcache.xml + CacheConfig + evicciones + test
@@ -353,8 +359,15 @@ Solo los íconos de estado (toast) llevan un toque de color. Etiquetas: ADMIN `c
 - [x] Locale `es-CO` + `DEFAULT_CURRENCY_CODE = COP` en `app.config.ts`
 - Estados con color funcional en etiquetas: pendiente ámbar, aprobado verde, rechazado rojo, cancelado gris.
 
-**Frontend · Módulo 4 — Admin: créditos (aprobar con EA / rechazar), tramos, usuarios**
-- [ ] …
+**Frontend · Módulo 4 — Admin: créditos y tramos de tasa** ✔ (pendiente de prueba manual del usuario)
+- [x] `modules/admin/credits`: repository → service → `AdminCreditsStore` (filtros y paginación en servidor, descarta respuestas viejas)
+- [x] `/admin/creditos`: tarjetas por estado (clic = filtro), `p-selectbutton`, búsqueda con debounce, `p-table` lazy
+- [x] `approve-credit-dialog`: EA precargada con la sugerida, simulación en vivo, diferencia de cuota vs. sugerida
+- [x] `reject-credit-dialog`: motivo 10–500 (validador con trim), contador, motivos frecuentes
+- [x] 409/404 al decidir → toast "La solicitud cambió" + recarga
+- [x] `modules/admin/interest-rates`: `/admin/tasas` con **barra de cobertura** de plazos (muestra huecos sin tasa), tabla y `tier-form-dialog`
+      (validador cruzado desde ≤ hasta; superposición la devuelve el backend). Guardar/eliminar invalida el catálogo cacheado.
+- [x] `credit-detail-dialog` con `showApplicant`; rechazados/cancelados muestran "—" en tasa y cuota (no una cuota estimada)
 
 **Frontend · Módulo 5 — Pulido UX (skeletons, empty states, responsive)**
 - [ ] …

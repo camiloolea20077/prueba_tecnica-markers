@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common'
+import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,6 +25,7 @@ import { QuoteSummaryComponent } from '../quote-summary/quote-summary.component'
   selector: 'app-credit-detail-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CurrencyPipe,
     DatePipe,
     DecimalPipe,
     ButtonModule,
@@ -41,6 +42,8 @@ export class CreditDetailDialogComponent {
   readonly visible = model(false)
   readonly credit = input<Credit | null>(null)
   readonly canCancel = input(false)
+  /** Muestra nombre y correo del solicitante (vista del analista). */
+  readonly showApplicant = input(false)
   readonly cancel = output<Credit>()
 
   protected readonly schedule = signal<AmortizationRow[]>([])

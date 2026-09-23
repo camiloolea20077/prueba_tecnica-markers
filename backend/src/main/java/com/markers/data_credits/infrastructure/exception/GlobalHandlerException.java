@@ -18,6 +18,7 @@ import org.springframework.web.server.ServerWebInputException;
 
 import com.markers.data_credits.domain.exception.CreditNotFoundException;
 import com.markers.data_credits.domain.exception.DomainException;
+import com.markers.data_credits.domain.exception.InterestRateTierNotFoundException;
 import com.markers.data_credits.domain.exception.InvalidCreditStateException;
 import com.markers.data_credits.domain.exception.InactiveUserException;
 import com.markers.data_credits.domain.exception.InvalidCredentialsException;
@@ -62,7 +63,8 @@ public class GlobalHandlerException {
         return build(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta acción", null);
     }
 
-    @ExceptionHandler({UserNotFoundException.class, CreditNotFoundException.class})
+    @ExceptionHandler({UserNotFoundException.class, CreditNotFoundException.class,
+            InterestRateTierNotFoundException.class})
     public ResponseEntity<ApiResponse<Object>> handleNotFound(DomainException ex) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }

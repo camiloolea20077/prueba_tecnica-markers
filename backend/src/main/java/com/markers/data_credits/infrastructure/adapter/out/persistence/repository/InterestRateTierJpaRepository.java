@@ -13,6 +13,8 @@ public interface InterestRateTierJpaRepository extends JpaRepository<InterestRat
 
     List<InterestRateTierEntity> findByActiveTrueOrderByMinTermMonthsAsc();
 
+    List<InterestRateTierEntity> findAllByOrderByMinTermMonthsAscIdAsc();
+
     @Query("""
             select t from InterestRateTierEntity t
             where t.active = true and :term between t.minTermMonths and t.maxTermMonths

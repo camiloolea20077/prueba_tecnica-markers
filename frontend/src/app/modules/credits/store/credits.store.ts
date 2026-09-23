@@ -106,6 +106,12 @@ export class CreditsStore {
     )
   }
 
+  /** Descarta el catálogo cacheado (tras cambiar tramos de tasa). */
+  invalidateCatalog(): void {
+    this._catalog.set(null)
+    this.catalog$ = undefined
+  }
+
   /** Limpia el estado al cerrar sesión. */
   reset(): void {
     this._credits.set([])

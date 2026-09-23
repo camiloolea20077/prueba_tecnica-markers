@@ -15,4 +15,13 @@ public interface InterestRateTierRepositoryPort {
 
     /** Tramo activo cuyo rango de plazo contiene {@code termMonths}. */
     Optional<InterestRateTier> findActiveForTerm(int termMonths);
+
+    /** Todos los tramos ordenados por plazo mínimo. */
+    List<InterestRateTier> findAll();
+
+    Optional<InterestRateTier> findById(Long id);
+
+    InterestRateTier save(InterestRateTier tier);
+
+    void deleteById(Long id);
 }
