@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Caché local (EhCache 3 vía JCache) para lecturas repetitivas del estado de los créditos.
+  Los valores son records inmutables y Serializable. La invalidación se hace tras el commit
+  (infrastructure/adapter/out/cache); el TTL solo acota el peor caso.
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.ehcache.org/v3"
+        xmlns:jsr107="http://www.ehcache.org/v3/jsr107"
+        xsi:schemaLocation="
+            http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.0.xsd
+            http://www.ehcache.org/v3/jsr107 http://www.ehcache.org/schema/ehcache-107-ext-3.0.xsd">
+
+    <service>
+        <jsr107:defaults enable-management="true" enable-statistics="true"/>
+    </service>
+
+    <cache-template name="default">
+        <key-type>java.lang.Object</key-type>
+        <value-type>java.lang.Object</value-type>
+        <heap unit="entries">1000</heap>
+    </cache-template>
+
+    <!-- Detalle / estado de un crédito. Clave: id del crédito -->
+    <cache alias="creditById" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+    </cache>
+
+    <!-- "Mis créditos". Clave: "{userId}:{status|ALL}" -->
+    <cache alias="creditsByUser" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">5</ttl>
+        </expiry>
+    </cache>
+
+    <!-- Tramos de tasa activos (catálogo y tasa sugerida). Clave: "all" -->
+    <cache alias="activeRateTiers" uses-template="default">
+        <expiry>
+            <ttl unit="minutes">30</ttl>
+        </expiry>
+        <heap unit="entries">10</heap>
+    </cache>
+</config>

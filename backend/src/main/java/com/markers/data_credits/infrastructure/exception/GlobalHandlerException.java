@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,12 @@ import org.springframework.web.server.ServerWebInputException;
 
 import com.markers.data_credits.domain.exception.CreditNotFoundException;
 import com.markers.data_credits.domain.exception.DomainException;
+import com.markers.data_credits.domain.exception.EmailAlreadyExistsException;
 import com.markers.data_credits.domain.exception.InterestRateTierNotFoundException;
 import com.markers.data_credits.domain.exception.InvalidCreditStateException;
 import com.markers.data_credits.domain.exception.InactiveUserException;
 import com.markers.data_credits.domain.exception.InvalidCredentialsException;
+import com.markers.data_credits.domain.exception.UserInUseException;
 import com.markers.data_credits.domain.exception.UserNotFoundException;
 
 /**
@@ -69,8 +72,9 @@ public class GlobalHandlerException {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
-    @ExceptionHandler(InvalidCreditStateException.class)
-    public ResponseEntity<ApiResponse<Object>> handleConflict(InvalidCreditStateException ex) {
+    @ExceptionHandler({InvalidCreditStateException.class, EmailAlreadyExistsException.class,
+            UserInUseException.class})
+    public ResponseEntity<ApiResponse<Object>> handleConflict(DomainException ex) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
@@ -79,6 +83,13 @@ public class GlobalHandlerException {
     public ResponseEntity<ApiResponse<Object>> handleOptimisticLock(OptimisticLockingFailureException ex) {
         return build(HttpStatus.CONFLICT,
                 "El registro fue modificado por otro usuario. Actualice e intente de nuevo", null);
+    }
+
+    /** Restricción de BD violada en una carrera (p. ej. dos altas simultáneas con el mismo correo). */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Violación de integridad: {}", ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.CONFLICT, "El registro entra en conflicto con otro existente", null);
     }
 
     /** Cualquier otra regla de negocio incumplida. */

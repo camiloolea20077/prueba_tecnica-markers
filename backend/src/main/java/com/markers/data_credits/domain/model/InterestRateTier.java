@@ -1,5 +1,6 @@
 package com.markers.data_credits.domain.model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -15,7 +16,7 @@ public record InterestRateTier(Long id,
                                int minTermMonths,
                                int maxTermMonths,
                                BigDecimal annualEffectiveRate,
-                               boolean active) {
+                               boolean active) implements Serializable {
 
     /**
      * Crea un tramo validando nombre, rango de plazo y tasa contra la política.

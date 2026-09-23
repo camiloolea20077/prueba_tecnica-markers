@@ -1,5 +1,6 @@
 package com.markers.data_credits.domain.model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -34,7 +35,7 @@ public record Credit(Long id,
                      Long decidedBy,
                      Instant decidedAt,
                      Instant createdAt,
-                     Long version) {
+                     Long version) implements Serializable {
 
     public static final int MIN_REASON_LENGTH = 10;
     public static final int MAX_REASON_LENGTH = 500;

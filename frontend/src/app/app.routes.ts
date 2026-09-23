@@ -3,9 +3,6 @@ import { authGuard } from './core/auth/guards/auth.guard'
 import { guestGuard } from './core/auth/guards/guest.guard'
 import { roleGuard } from './core/auth/guards/role.guard'
 
-const comingSoon = () =>
-  import('./shared/pages/coming-soon/coming-soon.component').then((m) => m.ComingSoonComponent)
-
 /**
  * Las restricciones de rol/permisos deben coincidir con `core/layout/menu/menu.config.ts`.
  */
@@ -122,7 +119,10 @@ export const routes: Routes = [
               roles: ['ADMIN'],
               permissions: ['USER_MANAGE'],
             },
-            loadComponent: comingSoon,
+            loadComponent: () =>
+              import('./modules/admin/users/UI/page/users/users.component').then(
+                (m) => m.UsersComponent,
+              ),
           },
         ],
       },

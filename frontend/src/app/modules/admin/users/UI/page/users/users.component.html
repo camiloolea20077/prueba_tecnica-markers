@@ -1,0 +1,191 @@
+<!-- Encabezado -->
+<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h2 class="text-2xl font-bold tracking-tight text-surface-900">Usuarios</h2>
+    <p class="mt-1 text-sm text-surface-500">Crea usuarios, asigna roles y controla su acceso.</p>
+  </div>
+  <p-button label="Nuevo usuario" icon="pi pi-user-plus" (onClick)="openNew()" />
+</div>
+
+<section class="mt-6 overflow-hidden rounded-2xl border border-surface-200 bg-surface-0">
+  <!-- Filtros -->
+  <div
+    class="flex flex-col gap-3 border-b border-surface-100 p-4 lg:flex-row lg:items-center lg:justify-between"
+  >
+    <p-iconfield class="lg:w-80">
+      <p-inputicon styleClass="pi pi-search" />
+      <input
+        pInputText
+        type="search"
+        [formControl]="search"
+        placeholder="Buscar por nombre o correo"
+        class="w-full"
+        aria-label="Buscar usuario"
+      />
+    </p-iconfield>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <p-select
+        [options]="roleOptions()"
+        [ngModel]="store.query().role"
+        (ngModelChange)="onRole($event)"
+        optionLabel="label"
+        optionValue="value"
+        styleClass="sm:w-48"
+        ariaLabel="Filtrar por rol"
+      />
+      <p-selectbutton
+        [options]="activeOptions"
+        [ngModel]="activeFilter()"
+        (ngModelChange)="onActive($event)"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        size="small"
+      />
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <p-table
+    [value]="store.users()"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="store.query().size"
+    [first]="store.first()"
+    [totalRecords]="store.totalRecords()"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [loading]="store.loading()"
+    [rowHover]="true"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first}–{last} de {totalRecords}"
+    [tableStyle]="{ 'min-width': '52rem' }"
+    dataKey="id"
+  >
+    <ng-template #header>
+      <tr>
+        <th>Usuario</th>
+        <th>Rol</th>
+        <th>Estado</th>
+        <th>Creado</th>
+        <th class="w-36 text-right">Acciones</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-u>
+      <tr [class.opacity-60]="!u.active">
+        <td>
+          <div class="flex items-center gap-3">
+            <p-avatar
+              [label]="initials(u.fullName)"
+              shape="circle"
+              [styleClass]="
+                u.role === 'ADMIN'
+                  ? '!bg-surface-950 !text-white !font-semibold'
+                  : '!bg-surface-100 !text-surface-900 !font-semibold'
+              "
+            />
+            <div class="min-w-0">
+              <p class="flex items-center gap-2 font-medium text-surface-900">
+                {{ u.fullName }}
+                @if (isSelf(u)) {
+                  <span
+                    class="rounded-full bg-surface-100 px-2 py-0.5 text-[0.65rem] font-semibold text-surface-600"
+                  >
+                    Tú
+                  </span>
+                }
+              </p>
+              <p class="truncate text-xs text-surface-500">{{ u.email }}</p>
+            </div>
+          </div>
+        </td>
+        <td>
+          <p-tag
+            [value]="u.roleName"
+            [severity]="u.role === 'ADMIN' ? 'contrast' : 'secondary'"
+            [icon]="u.role === 'ADMIN' ? 'pi pi-shield' : 'pi pi-user'"
+          />
+        </td>
+        <td>
+          <span
+            class="inline-flex items-center gap-1.5 text-sm"
+            [class]="u.active ? 'text-surface-900' : 'text-surface-400'"
+          >
+            <span
+              class="h-2 w-2 rounded-full"
+              [class]="u.active ? 'bg-emerald-500' : 'bg-surface-300'"
+            ></span>
+            {{ u.active ? 'Activo' : 'Inactivo' }}
+          </span>
+        </td>
+        <td class="text-sm text-surface-500">{{ u.createdAt | date: 'd MMM y' }}</td>
+        <td class="text-right">
+          <div class="flex justify-end gap-1">
+            <p-button
+              icon="pi pi-pencil"
+              [text]="true"
+              [rounded]="true"
+              severity="secondary"
+              size="small"
+              pTooltip="Editar"
+              tooltipPosition="top"
+              ariaLabel="Editar"
+              (onClick)="openEdit(u)"
+            />
+            <p-button
+              [icon]="u.active ? 'pi pi-ban' : 'pi pi-check-circle'"
+              [text]="true"
+              [rounded]="true"
+              severity="secondary"
+              size="small"
+              [pTooltip]="
+                isSelf(u) ? 'No puedes desactivarte' : u.active ? 'Desactivar' : 'Activar'
+              "
+              tooltipPosition="top"
+              [ariaLabel]="u.active ? 'Desactivar' : 'Activar'"
+              [disabled]="isSelf(u)"
+              [loading]="busyId() === u.id"
+              (onClick)="toggleActive(u)"
+            />
+            <p-button
+              icon="pi pi-trash"
+              [text]="true"
+              [rounded]="true"
+              severity="danger"
+              size="small"
+              [pTooltip]="isSelf(u) ? 'No puedes eliminarte' : 'Eliminar'"
+              tooltipPosition="top"
+              ariaLabel="Eliminar"
+              [disabled]="isSelf(u)"
+              (onClick)="confirmDelete(u)"
+            />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="5">
+          <div class="flex flex-col items-center px-6 py-14 text-center">
+            <span
+              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-100 text-surface-900"
+            >
+              <i class="pi pi-users text-xl"></i>
+            </span>
+            <p class="mt-4 font-semibold text-surface-900">No hay usuarios con estos filtros</p>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>
+
+<app-user-form-dialog
+  [(visible)]="formVisible"
+  [user]="editing()"
+  [roles]="store.roles()"
+  [currentUserId]="currentUserId()"
+  (saved)="onSaved($event)"
+/>

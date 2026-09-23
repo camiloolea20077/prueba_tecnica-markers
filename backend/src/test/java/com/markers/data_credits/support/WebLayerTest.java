@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Import;
 
 import com.markers.data_credits.infrastructure.adapter.in.web.mapper.AuthWebMapperImpl;
 import com.markers.data_credits.infrastructure.adapter.in.web.mapper.CreditWebMapperImpl;
+import com.markers.data_credits.infrastructure.adapter.in.web.mapper.UserWebMapperImpl;
 import com.markers.data_credits.infrastructure.adapter.in.web.support.BlockingExecutor;
 import com.markers.data_credits.infrastructure.exception.GlobalHandlerException;
 import com.markers.data_credits.infrastructure.security.JwtAuthenticationManager;
@@ -25,6 +26,6 @@ import com.markers.data_credits.infrastructure.security.SecurityErrorHandler;
 @Retention(RetentionPolicy.RUNTIME)
 @Import({SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationManager.class,
         JwtSecurityContextRepository.class, SecurityErrorHandler.class, GlobalHandlerException.class,
-        BlockingExecutor.class, AuthWebMapperImpl.class, CreditWebMapperImpl.class})
+        BlockingExecutor.class, AuthWebMapperImpl.class, CreditWebMapperImpl.class, UserWebMapperImpl.class})
 public @interface WebLayerTest {
 }

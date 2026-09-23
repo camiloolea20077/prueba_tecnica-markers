@@ -49,3 +49,8 @@ management:
     web:
       exposure:
         include: health,info,caches
+
+logging:
+  level:
+    # Muestra cuándo la caché no tiene el dato y se consulta la base de datos
+    com.markers.data_credits.infrastructure.adapter.out.cache: DEBUG

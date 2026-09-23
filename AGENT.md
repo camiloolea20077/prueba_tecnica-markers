@@ -167,7 +167,9 @@ Las tasas se guardan como **porcentaje** (ej. `24.5000` = 24,5 % EA).
 | PATCH | `/admin/credits/{id}/approve` | ADMIN + `CREDIT_APPROVE` | aprobar `{annualRate}` (EA %) — transaccional + `@Version` (paralelo → 409) ✔ |
 | PATCH | `/admin/credits/{id}/reject` | ADMIN + `CREDIT_REJECT` | rechazar `{reason}` (10–500 caracteres) — transaccional ✔ |
 | GET/POST/PUT/DELETE | `/admin/interest-rates[/{id}]` | ADMIN + `RATE_MANAGE` | CRUD de tramos (activos sin superposición) ✔ |
-| GET/POST/PUT/DELETE | `/admin/users[/{id}]` | ADMIN + `USER_MANAGE` | CRUD de usuarios |
+| GET/POST/PUT/DELETE | `/admin/users[/{id}]?q=&role=&active=` | ADMIN + `USER_MANAGE` | CRUD de usuarios (paginado) ✔ |
+| PATCH | `/admin/users/{id}/status` | ADMIN + `USER_MANAGE` | activar/desactivar `{active}` ✔ |
+| GET | `/admin/roles` | ADMIN + `USER_MANAGE` | roles con permisos ✔ |
 
 Respuesta de crédito: `{id, applicant{id,fullName,email}, amount, termMonths, status, statusLabel, estimated, suggestedAnnualRate,
 annualRate, monthlyRate, monthlyPayment, totalInterest, totalPayable, rejectionReason, createdAt, decidedAt}`.
@@ -200,13 +202,19 @@ Toda respuesta: `ApiResponse<T> { status:int, message:String, error:boolean, dat
   ⚠️ Con seguridad reactiva el método anotado **debe devolver `Mono`/`Flux`** (si no → 500 `IllegalStateException`).
 - Endpoints implementados: `POST /api/auth/login` → `{token, tokenType, expiresAt, user{id, fullName, email, role, roleName, permissions}}`; `GET /api/auth/me`.
 
-### 4.6 Caché (EhCache 3)
-| Cache | Clave | TTL | Se llena en | Se invalida en |
+### 4.6 Caché (EhCache 3) ✔
+Decoradores `@Primary` de los puertos en `infrastructure/adapter/out/cache` (el dominio y los servicios no saben que hay caché):
+| Cache | Clave | TTL | Se llena en | Se invalida (tras commit) en |
 |---|---|---|---|---|
-| `creditById` | creditId | 10 min | `QueryCreditUseCase.findById` | approve, reject, cancel |
-| `creditsByUser` | userId | 5 min | `QueryCreditUseCase.findByUser` | request, approve, reject, cancel |
-| `rateTiers` | `'all'` | 30 min | `InterestRateService.findActive` | CRUD de tramos |
-Configurado en `ehcache.xml`; `@EnableCaching` en `CacheConfig`. Los objetos cacheados son records del dominio/app (Serializable).
+| `creditById` | id | 10 min | `CachingCreditRepository.findById` (no cachea "no existe") | `save` del crédito (solicitar, cancelar, aprobar, rechazar) |
+| `creditsByUser` | `userId:STATUS\|ALL` | 5 min | `CachingCreditRepository.findByUserId` | `save` de un crédito del usuario (todas sus claves) |
+| `activeRateTiers` | `'all'` | 30 min | `CachingInterestRateTierRepository.findActive` (también resuelve `findActiveForTerm`) | crear/editar/eliminar tramo |
+- `AfterCommit`: invalida en `afterCommit` (evita recachear el valor viejo; en rollback no invalida). Sin transacción → inmediato.
+- `CachingUserRepository`: al editar/eliminar un usuario vacía las cachés de créditos (incluyen nombre/correo del solicitante).
+- Valores cacheados: records inmutables `Serializable` (`Credit`, `CreditApplicant`, `InterestRateTier`).
+- No se cachean: búsqueda/conteos del admin (cambian con cada decisión) ni usuarios.
+- Log DEBUG `...adapter.out.cache` muestra "Caché sin dato: consultando…"; `/actuator/caches` lista las cachés.
+- Test `CachingRepositoriesTest` con el `ehcache.xml` real. Verificado: 3× `/credits/me` + 3× `/credits/{id}` = 2 consultas a BD.
 
 ### 4.7 Transacciones
 - `DecideCreditUseCase.approve/reject`: `@Transactional` — carga con lock optimista, valida transición, registra `decidedBy`/`decidedAt`, guarda, evicta caché. Si algo falla, rollback completo.
@@ -315,11 +323,14 @@ Reglas frontend:
 - [x] Tests: CreditDecision (12), AdminCreditService (7), InterestRateService (6), AdminCreditController (12) → **109 en total**
 - [x] curl contra Postgres: 2 aprobaciones simultáneas → 200 + 409
 
-**Backend · Módulo 4 — Caché EhCache**
-- [ ] ehcache.xml + CacheConfig + evicciones + test
+**Backend · Módulo 4 — Caché EhCache** ✔ (ver §4.6) — `CachingRepositoriesTest` (7)
 
-**Backend · Módulo 5 — CRUD de usuarios (admin)**
-- [ ] Endpoints `/api/admin/users` + tests
+**Backend · Módulo 5 — CRUD de usuarios (admin)** ✔
+- [x] `ManageUsersUseCase` / `UserService`: correo único (409), rol existente (422), contraseña BCrypt (6–72, opcional al editar)
+- [x] Reglas: nadie se desactiva, se elimina ni se cambia el rol a sí mismo; siempre ≥ 1 admin activo; no se elimina quien tiene créditos (409 → desactivar)
+- [x] `User` con `createdAt`, `withChanges`, `withActive`; correo normalizado a minúsculas
+- [x] `RoleRepositoryPort`, `UserSpecifications`, `AdminUserController`; `DataIntegrityViolationException` → 409
+- [x] Tests: UserService (11), AdminUserController (8) → **135 en total**. curl OK (el alta con tildes desde la terminal de Windows falla por codificación Latin-1, con UTF-8 funciona)
 
 **Frontend · Módulo 1 — Login y núcleo de autenticación** ✔
 - [x] Tema `core/theme/app-preset.ts` (Aura + primario índigo), `ApiResponse<T>`
@@ -369,7 +380,13 @@ Solo los íconos de estado (toast) llevan un toque de color. Etiquetas: ADMIN `c
       (validador cruzado desde ≤ hasta; superposición la devuelve el backend). Guardar/eliminar invalida el catálogo cacheado.
 - [x] `credit-detail-dialog` con `showApplicant`; rechazados/cancelados muestran "—" en tasa y cuota (no una cuota estimada)
 
-**Frontend · Módulo 5 — Pulido UX (skeletons, empty states, responsive)**
+**Frontend · Módulo 5 — Usuarios (admin)** ✔ (pendiente de prueba manual del usuario)
+- [x] `modules/admin/users`: repository → service → `AdminUsersStore` (paginación y filtros en servidor, roles cacheados)
+- [x] `/admin/usuarios`: búsqueda, filtro por rol (`p-select`) y estado, tabla lazy, "Tú" en la fila propia (acciones deshabilitadas)
+- [x] `user-form-dialog`: alta/edición, "Cambiar contraseña" opcional al editar, rol/estado bloqueados para uno mismo, 409 marca el correo
+- [x] Se eliminó `shared/pages/coming-soon` (todas las secciones del menú ya existen)
+
+**Frontend · Módulo 6 — Pulido UX (responsive, detalles de las pruebas manuales)**
 - [ ] …
 
 **Fase 5 — Entrega**

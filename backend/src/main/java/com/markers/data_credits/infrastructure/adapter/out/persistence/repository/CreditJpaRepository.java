@@ -28,6 +28,8 @@ public interface CreditJpaRepository extends JpaRepository<CreditEntity, Long>, 
 
     long countByUserIdAndStatus(Long userId, CreditStatus status);
 
+    boolean existsByUserId(Long userId);
+
     /** Búsqueda dinámica (filtros opcionales) cargando el solicitante para evitar N+1. */
     @Override
     @EntityGraph(attributePaths = "user")
