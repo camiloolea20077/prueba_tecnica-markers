@@ -1,13 +1,14 @@
+# syntax=docker/dockerfile:1
+
 # ---------- Compilación ----------
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Dependencias primero (capa cacheable mientras no cambie el pom)
 COPY pom.xml .
-RUN mvn -q -B dependency:go-offline
-
 COPY src ./src
-RUN mvn -q -B -DskipTests package
+# La caché de BuildKit conserva ~/.m2 entre builds (no se usa dependency:go-offline porque
+# resuelve dependencias transitivas de ehcache:jakarta sin la gestión de versiones de Spring Boot)
+RUN --mount=type=cache,target=/root/.m2 mvn -q -B -DskipTests package
 
 # ---------- Ejecución ----------
 FROM eclipse-temurin:21-jre-alpine

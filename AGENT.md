@@ -26,9 +26,10 @@ Credenciales semilla (password `123`, guardada con BCrypt):
 prueba_tecnica-markers/
 ├── AGENT.md              ← este archivo (reglas + plan)
 ├── CLAUDE.md             ← solo importa AGENT.md
-├── docker-compose.yml    ← PostgreSQL 16
-├── backend/              ← data_credits: Spring Boot (Maven), artifact `com.markers:data_credits`
-└── frontend/             ← Angular 20
+├── README.md             ← documentación de entrega
+├── docker-compose.yml    ← postgres (5433) + backend (8080) + frontend (4200)
+├── backend/              ← data_credits: Spring Boot (Maven), artifact `com.markers:data_credits`, Dockerfile, http/
+└── frontend/             ← Angular 20, Dockerfile + nginx.conf
 ```
 `.claude/` está en `.gitignore` (skills, agentes y settings locales no se versionan).
 
@@ -389,9 +390,15 @@ Solo los íconos de estado (toast) llevan un toque de color. Etiquetas: ADMIN `c
 **Frontend · Módulo 6 — Pulido UX (responsive, detalles de las pruebas manuales)**
 - [ ] …
 
-**Fase 5 — Entrega**
-- [ ] README con pasos de ejecución, decisiones y credenciales
-- [ ] Colección de requests (`backend/http/data_credits.http`)
+**Fase 5 — Entrega** ✔
+- [x] `V5__demo_data.sql`: 6 usuarios demo (1 admin extra, 1 inactivo) y 10 créditos en todos los estados; condiciones de los
+      aprobados calculadas con las mismas fórmulas de `InterestCalculator` (verificado: guardado = simulado)
+- [x] `backend/http/data_credits.http` (REST Client; captura tokens e ids entre peticiones)
+- [x] Docker: `backend/Dockerfile` (Maven + caché BuildKit de ~/.m2 → JRE 21 alpine, usuario sin privilegios; **no** usar
+      `dependency:go-offline`: falla con `ehcache:jakarta`), `frontend/Dockerfile` (node 22 → nginx con fallback SPA),
+      `docker-compose.yml` con postgres + backend (healthcheck actuator) + frontend. `docker compose up -d --build`
+- [x] `README.md`: ejecución (Docker / local), credenciales, reglas, fórmulas, arquitectura, decisiones, pruebas, endpoints
+- [ ] Pulido UX según pruebas manuales del usuario
 
 ---
 
