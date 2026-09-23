@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: data-credits-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: data_credits_db
+      POSTGRES_USER: data_credits
+      POSTGRES_PASSWORD: data_credits
+      TZ: America/Bogota
+    ports:
+      - "5433:5432"
+    volumes:
+      - data-credits-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U data_credits -d data_credits_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  data-credits-pgdata:

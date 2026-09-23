@@ -1,0 +1,20 @@
+<div class="flex h-screen overflow-hidden bg-surface-50">
+  @if (layout.mobileOpen()) {
+    <div
+      class="fixed inset-0 z-30 bg-surface-950/50 backdrop-blur-sm lg:hidden"
+      (click)="layout.closeMobile()"
+      aria-hidden="true"
+    ></div>
+  }
+
+  <app-sidebar />
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <app-topbar />
+    <main class="flex-1 overflow-y-auto">
+      <div class="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+</div>

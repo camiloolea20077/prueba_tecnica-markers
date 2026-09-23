@@ -1,0 +1,35 @@
+<p-table
+  [value]="rows()"
+  [paginator]="rows().length > 12"
+  [rows]="12"
+  size="small"
+  [tableStyle]="{ 'min-width': '36rem' }"
+  styleClass="text-sm"
+>
+  <ng-template #header>
+    <tr>
+      <th class="w-16">Cuota</th>
+      <th class="text-right">Valor cuota</th>
+      <th class="text-right">Interés</th>
+      <th class="text-right">Abono a capital</th>
+      <th class="text-right">Saldo</th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-row>
+    <tr>
+      <td class="font-medium text-surface-900">{{ row.period }}</td>
+      <td class="text-right tabular-nums">
+        {{ row.payment | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+      </td>
+      <td class="text-right tabular-nums text-surface-500">
+        {{ row.interest | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+      </td>
+      <td class="text-right tabular-nums">
+        {{ row.principal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+      </td>
+      <td class="text-right tabular-nums font-medium text-surface-900">
+        {{ row.balance | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

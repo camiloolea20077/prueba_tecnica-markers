@@ -1,0 +1,69 @@
+@if (store.user(); as user) {
+  <!-- Saludo -->
+  <section
+    class="relative overflow-hidden rounded-3xl bg-surface-950 px-6 py-8 text-white sm:px-10 sm:py-10"
+  >
+    <div class="relative">
+      <p class="text-sm font-medium text-surface-200">{{ greeting() }},</p>
+      <h2 class="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{{ firstName() }} 👋</h2>
+      <p class="mt-3 max-w-xl text-surface-300">
+        @if (store.isAdmin()) {
+          Revisa las solicitudes pendientes y define la tasa efectiva anual de cada crédito
+          aprobado.
+        } @else {
+          Simula tu cuota, solicita un crédito y sigue el estado de tus solicitudes desde aquí.
+        }
+      </p>
+    </div>
+  </section>
+
+  <!-- Accesos rápidos -->
+  <section class="mt-8">
+    <h3 class="text-sm font-semibold uppercase tracking-wider text-surface-500">Accesos rápidos</h3>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (item of menu.shortcuts(); track item.route) {
+        <a
+          [routerLink]="item.route"
+          class="group flex items-start gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-5 transition hover:-translate-y-0.5 hover:border-surface-400 hover:shadow-lg hover:shadow-surface-900/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-surface-900"
+        >
+          <span
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-100 text-surface-900 transition group-hover:bg-surface-950 group-hover:text-white"
+          >
+            <i [class]="item.icon + ' text-lg'"></i>
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-surface-900">{{ item.label }}</span>
+              <i
+                class="pi pi-arrow-right text-xs text-surface-300 transition group-hover:translate-x-1 group-hover:text-surface-900"
+              ></i>
+            </span>
+            <span class="mt-1 block text-sm text-surface-500">{{ item.description }}</span>
+          </span>
+        </a>
+      }
+    </div>
+  </section>
+
+  <!-- Acceso -->
+  <section class="mt-8 rounded-2xl border border-surface-200 bg-surface-0 p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 class="font-semibold text-surface-900">Tu acceso</h3>
+        <p class="text-sm text-surface-500">{{ user.email }}</p>
+      </div>
+      <p-tag
+        [value]="user.roleName"
+        [severity]="store.isAdmin() ? 'contrast' : 'secondary'"
+        [icon]="store.isAdmin() ? 'pi pi-shield' : 'pi pi-user'"
+      />
+    </div>
+    <ul class="mt-5 grid gap-2 sm:grid-cols-2">
+      @for (label of permissionLabels(); track label) {
+        <li class="flex items-center gap-2 text-sm text-surface-600">
+          <i class="pi pi-check-circle text-surface-900"></i> {{ label }}
+        </li>
+      }
+    </ul>
+  </section>
+}

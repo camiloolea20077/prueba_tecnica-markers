@@ -1,0 +1,70 @@
+<header
+  class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-surface-200 bg-surface-0/90 px-4 backdrop-blur sm:px-6"
+>
+  <!-- Móvil: abrir panel -->
+  <button
+    type="button"
+    class="flex h-10 w-10 items-center justify-center rounded-lg text-surface-600 hover:bg-surface-100 lg:hidden"
+    (click)="layout.toggleMobile()"
+    aria-label="Abrir menú"
+  >
+    <i class="pi pi-bars text-lg"></i>
+  </button>
+
+  <!-- Escritorio: colapsar barra lateral -->
+  <button
+    type="button"
+    class="hidden h-10 w-10 items-center justify-center rounded-lg text-surface-500 transition hover:bg-surface-100 hover:text-surface-800 lg:flex"
+    (click)="layout.toggleCollapsed()"
+    [pTooltip]="layout.collapsed() ? 'Expandir menú' : 'Contraer menú'"
+    tooltipPosition="bottom"
+    [attr.aria-label]="layout.collapsed() ? 'Expandir menú' : 'Contraer menú'"
+  >
+    <i
+      class="pi text-lg"
+      [class.pi-angle-double-right]="layout.collapsed()"
+      [class.pi-angle-double-left]="!layout.collapsed()"
+    ></i>
+  </button>
+
+  <!-- Título de la página -->
+  <div class="min-w-0 flex-1">
+    @if (page().section) {
+      <p class="truncate text-xs font-medium text-surface-400">{{ page().section }}</p>
+    }
+    <h1 class="truncate text-lg font-semibold text-surface-900">{{ page().label }}</h1>
+  </div>
+
+  <!-- Usuario -->
+  @if (store.user(); as user) {
+    <p-tag
+      class="hidden sm:inline-flex"
+      [value]="user.roleName"
+      [severity]="store.isAdmin() ? 'contrast' : 'secondary'"
+      [icon]="store.isAdmin() ? 'pi pi-shield' : 'pi pi-user'"
+    />
+    <button
+      type="button"
+      class="flex items-center gap-2 rounded-full p-1 pr-2 transition hover:bg-surface-100"
+      (click)="userMenuRef.toggle($event)"
+      aria-haspopup="true"
+      aria-label="Menú de usuario"
+    >
+      <p-avatar
+        [label]="initials()"
+        shape="circle"
+        styleClass="!bg-surface-950 !text-white !font-semibold"
+      />
+      <span class="hidden text-sm font-medium text-surface-700 md:inline">{{ user.fullName }}</span>
+      <i class="pi pi-chevron-down hidden text-xs text-surface-400 md:inline"></i>
+    </button>
+    <p-menu #userMenuRef [model]="userMenu" [popup]="true" appendTo="body">
+      <ng-template #start>
+        <div class="border-b border-surface-100 px-4 py-3">
+          <p class="text-sm font-semibold text-surface-900">{{ user.fullName }}</p>
+          <p class="text-xs text-surface-500">{{ user.email }}</p>
+        </div>
+      </ng-template>
+    </p-menu>
+  }
+</header>

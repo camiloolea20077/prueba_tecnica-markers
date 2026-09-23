@@ -1,0 +1,110 @@
+<aside
+  class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-surface-950 text-surface-200 shadow-2xl transition-[transform,width] duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:shadow-none"
+  [class.-translate-x-full]="!layout.mobileOpen()"
+  [class.translate-x-0]="layout.mobileOpen()"
+  [class.lg:w-20]="compact()"
+  [class.lg:w-72]="!compact()"
+  aria-label="Menú principal"
+>
+  <!-- Logo -->
+  <div
+    class="flex h-16 shrink-0 items-center border-b border-white/10"
+    [class]="compact() ? 'justify-center px-2' : 'justify-between px-5'"
+  >
+    <a
+      routerLink="/inicio"
+      class="rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+    >
+      <app-brand-logo tone="light" [size]="38" [showTagline]="false" [showName]="!compact()" />
+    </a>
+    <button
+      type="button"
+      class="flex h-9 w-9 items-center justify-center rounded-lg text-surface-300 hover:bg-white/10 lg:hidden"
+      (click)="layout.closeMobile()"
+      aria-label="Cerrar menú"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Navegación -->
+  <nav class="flex-1 overflow-y-auto overflow-x-hidden py-5" [class]="compact() ? 'px-3' : 'px-4'">
+    @for (section of menu.sections(); track section.label; let first = $first) {
+      <div [class.mt-6]="!first">
+        @if (!compact()) {
+          <p
+            class="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-surface-500"
+          >
+            {{ section.label }}
+          </p>
+        } @else if (!first) {
+          <div class="mx-auto mb-3 h-px w-8 bg-white/10"></div>
+        }
+
+        <ul class="flex flex-col gap-1">
+          @for (item of section.items; track item.route) {
+            <li>
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="!bg-white/10 !text-white shadow-inner [&_.nav-accent]:opacity-100 [&_i]:!text-surface-300"
+                [routerLinkActiveOptions]="{ exact: !!item.exact }"
+                class="group relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium text-surface-300 transition hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                [class]="compact() ? 'justify-center px-0' : 'px-3'"
+                [pTooltip]="item.label"
+                tooltipPosition="right"
+                [tooltipDisabled]="!compact()"
+                (click)="layout.closeMobile()"
+              >
+                <span
+                  class="nav-accent absolute -left-4 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-white opacity-0 transition"
+                  [class.hidden]="compact()"
+                ></span>
+                <i
+                  [class]="
+                    item.icon +
+                    ' text-base text-surface-400 transition group-hover:text-surface-200'
+                  "
+                ></i>
+                @if (!compact()) {
+                  <span class="truncate">{{ item.label }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </nav>
+
+  <!-- Usuario -->
+  @if (store.user(); as user) {
+    <div class="shrink-0 border-t border-white/10 p-3">
+      <div class="flex items-center gap-3 rounded-xl bg-white/5 p-2.5" [class.flex-col]="compact()">
+        <p-avatar
+          [label]="initials()"
+          shape="circle"
+          styleClass="!bg-white !text-surface-950 !font-semibold shrink-0"
+          [pTooltip]="user.fullName + ' · ' + user.roleName"
+          tooltipPosition="right"
+          [tooltipDisabled]="!compact()"
+        />
+        @if (!compact()) {
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-white">{{ user.fullName }}</p>
+            <p class="truncate text-xs text-surface-400">{{ user.roleName }}</p>
+          </div>
+        }
+        <button
+          type="button"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-surface-300 transition hover:bg-white/10 hover:text-white"
+          (click)="layout.confirmLogout()"
+          pTooltip="Cerrar sesión"
+          tooltipPosition="right"
+          aria-label="Cerrar sesión"
+        >
+          <i class="pi pi-sign-out"></i>
+        </button>
+      </div>
+    </div>
+  }
+</aside>

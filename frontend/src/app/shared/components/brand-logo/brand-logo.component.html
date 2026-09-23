@@ -1,0 +1,36 @@
+<div class="flex items-center gap-3" [class.flex-col]="stacked()" [class.text-center]="stacked()">
+  <svg
+    [attr.width]="size()"
+    [attr.height]="size()"
+    viewBox="0 0 48 48"
+    fill="none"
+    aria-hidden="true"
+  >
+    <rect width="48" height="48" rx="12" [attr.fill]="badgeFill()" />
+    <path
+      d="M13 31.5 21 23l5 5 9-10"
+      [attr.stroke]="strokeColor()"
+      stroke-width="3.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M29 18h6v6"
+      [attr.stroke]="strokeColor()"
+      stroke-width="3.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="13" cy="31.5" r="2.4" [attr.fill]="strokeColor()" />
+  </svg>
+  @if (showName()) {
+    <div class="leading-tight">
+      <span class="block text-xl font-bold tracking-tight" [class]="nameClass()">Data Credits</span>
+      @if (showTagline()) {
+        <span class="block text-xs font-medium uppercase tracking-[0.2em]" [class]="taglineClass()">
+          Préstamos digitales
+        </span>
+      }
+    </div>
+  }
+</div>

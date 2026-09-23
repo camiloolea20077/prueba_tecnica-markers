@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'primeicons/primeicons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  @apply h-full font-sans antialiased;
+}
+
+body {
+  @apply bg-surface-50 text-surface-800 dark:bg-surface-950 dark:text-surface-100;
+}
+
+/* ---------- Toast personalizado (app-toast) ---------- */
+/* El contenido lo dibuja la plantilla headless; se neutraliza el contenedor de PrimeNG. */
+.app-toast .p-toast-message {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  margin-bottom: 0.75rem;
+}
+
+.toast-progress {
+  animation-name: toast-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes toast-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

@@ -1,0 +1,226 @@
+<div class="flex min-h-screen w-full bg-surface-0">
+  <!-- ============ PANEL IZQUIERDO (informativo) ============ -->
+  <aside
+    class="relative hidden overflow-hidden bg-surface-950 text-white lg:flex lg:basis-[47.65%] lg:flex-col"
+  >
+    <!-- Decoración -->
+    <svg
+      class="pointer-events-none absolute inset-0 h-full w-full opacity-[0.07]"
+      aria-hidden="true"
+    >
+      <defs>
+        <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+          <path d="M32 0H0V32" fill="none" stroke="white" stroke-width="1" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+    </svg>
+
+    <div class="relative flex h-full flex-col px-16 pb-14 pt-[3.75rem]">
+      <!-- Logo (x:65 y:60) -->
+      <app-brand-logo tone="light" [size]="48" />
+
+      <!-- Título + descripción (y:350 / y:485) -->
+      <div class="mt-auto max-w-lg">
+        <span
+          class="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-surface-200 ring-1 ring-white/15"
+        >
+          <i class="pi pi-verified text-[0.7rem]"></i> Plataforma de crédito digital
+        </span>
+        <h1 class="text-5xl font-bold leading-[1.1] tracking-tight">
+          Sistema de <span class="text-surface-300">Préstamos</span>
+        </h1>
+        <p class="mt-6 text-lg leading-relaxed text-surface-300">
+          Solicita tu crédito, simula la cuota con tasa efectiva anual y sigue el estado de tu
+          solicitud, todo en un solo lugar y sin filas.
+        </p>
+      </div>
+
+      <!-- Beneficios (y:635) -->
+      <ul class="mt-12 grid max-w-lg grid-cols-2 gap-x-6 gap-y-6">
+        @for (b of benefits; track b.title) {
+          <li class="flex items-start gap-3">
+            <span
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15"
+            >
+              <i [class]="b.icon + ' text-surface-200'"></i>
+            </span>
+            <div>
+              <p class="text-sm font-semibold">{{ b.title }}</p>
+              <p class="mt-0.5 text-sm text-surface-400">{{ b.text }}</p>
+            </div>
+          </li>
+        }
+      </ul>
+
+      <!-- Lema (y:915) -->
+      <div class="mt-auto pt-12">
+        <div class="mb-4 h-px w-16 bg-white/30"></div>
+        <p class="text-sm font-semibold uppercase tracking-[0.25em] text-surface-200">
+          Juntos construimos tu futuro financiero
+        </p>
+        <p class="mt-2 text-xs text-surface-400">© {{ year }} Data Credits</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ PANEL DERECHO (formulario) ============ -->
+  <main class="relative flex flex-1 flex-col bg-surface-50">
+    <!-- Acceso Administrativo -->
+    <div class="flex justify-end px-6 pt-6 sm:px-10 sm:pt-8">
+      <span
+        class="inline-flex items-center gap-2 rounded-full border border-surface-200 bg-surface-0 px-4 py-1.5 text-sm font-medium text-surface-600 shadow-sm"
+      >
+        <i class="pi pi-lock text-surface-900"></i> Acceso Administrativo
+      </span>
+    </div>
+
+    <div class="flex flex-1 items-center justify-center px-4 py-10 sm:px-8">
+      <div
+        class="w-full max-w-[26rem] rounded-3xl border border-surface-200 bg-surface-0 px-6 py-10 shadow-xl shadow-surface-900/5 sm:px-10"
+      >
+        <!-- Logo -->
+        <div class="flex justify-center">
+          <app-brand-logo [size]="56" [stacked]="true" />
+        </div>
+
+        <div class="mt-8 text-center">
+          <h2 class="text-2xl font-bold text-surface-900">Iniciar sesión</h2>
+          <p class="mt-1 text-sm text-surface-500">Ingresa tus credenciales para continuar</p>
+        </div>
+
+        @if (serverError()) {
+          <p-message
+            severity="error"
+            icon="pi pi-times-circle"
+            styleClass="mt-6 w-full"
+            [closable]="true"
+            (onClose)="serverError.set(null)"
+          >
+            {{ serverError() }}
+          </p-message>
+        }
+
+        <form class="mt-6 flex flex-col gap-5" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <!-- Usuario -->
+          <div class="flex flex-col gap-2">
+            <label for="email" class="text-sm font-medium text-surface-700">Usuario</label>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-envelope" />
+              <input
+                pInputText
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="correo@ejemplo.com"
+                autocomplete="username"
+                class="w-full"
+                [invalid]="invalid('email')"
+                aria-describedby="email-error"
+              />
+            </p-iconfield>
+            @if (invalid('email')) {
+              <small id="email-error" class="flex items-center gap-1 text-red-500">
+                <i class="pi pi-exclamation-circle text-xs"></i>
+                @if (form.controls.email.hasError('required')) {
+                  El usuario es obligatorio
+                } @else if (form.controls.email.hasError('email')) {
+                  Ingresa un correo válido
+                } @else {
+                  Máximo 150 caracteres
+                }
+              </small>
+            }
+          </div>
+
+          <!-- Contraseña -->
+          <div class="flex flex-col gap-2">
+            <label for="password" class="text-sm font-medium text-surface-700">Contraseña</label>
+            <p-password
+              inputId="password"
+              formControlName="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              [feedback]="false"
+              [toggleMask]="true"
+              [fluid]="true"
+              [invalid]="invalid('password')"
+            />
+            @if (invalid('password')) {
+              <small id="password-error" class="flex items-center gap-1 text-red-500">
+                <i class="pi pi-exclamation-circle text-xs"></i>
+                @if (form.controls.password.hasError('required')) {
+                  La contraseña es obligatoria
+                } @else {
+                  Máximo 100 caracteres
+                }
+              </small>
+            }
+          </div>
+
+          <!-- Recordar -->
+          <div class="flex items-center gap-2">
+            <p-checkbox inputId="remember" formControlName="remember" [binary]="true" />
+            <label for="remember" class="cursor-pointer select-none text-sm text-surface-600"
+              >Recordar</label
+            >
+          </div>
+
+          <p-button
+            type="submit"
+            label="INICIAR SESIÓN"
+            icon="pi pi-sign-in"
+            iconPos="right"
+            styleClass="w-full !py-3 !font-semibold !tracking-wide"
+            [loading]="loading()"
+          />
+        </form>
+
+        <p-divider align="center" styleClass="!my-6">
+          <span class="text-xs uppercase text-surface-400">o</span>
+        </p-divider>
+
+        <!-- Autenticación (cuentas de demostración) -->
+        <p-button
+          label="AUTENTICACIÓN"
+          icon="pi pi-key"
+          [outlined]="true"
+          severity="secondary"
+          styleClass="w-full !py-3 !font-semibold !tracking-wide"
+          (onClick)="demo.toggle($event)"
+        />
+        <p-popover #demo styleClass="w-80">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-surface-500">
+            Cuentas de demostración
+          </p>
+          <div class="flex flex-col gap-2">
+            @for (acc of demoAccounts; track acc.email) {
+              <button
+                type="button"
+                class="flex w-full items-center gap-3 rounded-xl border border-surface-200 p-3 text-left transition hover:border-surface-400 hover:bg-surface-50"
+                (click)="fillDemo(acc, demo)"
+              >
+                <span
+                  class="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-100 text-surface-900"
+                >
+                  <i [class]="acc.icon"></i>
+                </span>
+                <span class="flex-1">
+                  <span class="block text-sm font-semibold text-surface-800">{{ acc.label }}</span>
+                  <span class="block text-xs text-surface-500"
+                    >{{ acc.email }} · {{ acc.description }}</span
+                  >
+                </span>
+                <i class="pi pi-arrow-right text-xs text-surface-400"></i>
+              </button>
+            }
+          </div>
+        </p-popover>
+      </div>
+    </div>
+
+    <p class="pb-6 text-center text-xs text-surface-400 lg:hidden">
+      Juntos construimos tu futuro financiero
+    </p>
+  </main>
+</div>
