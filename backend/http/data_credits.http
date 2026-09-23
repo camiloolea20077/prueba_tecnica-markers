@@ -1,0 +1,265 @@
+###############################################################################
+# data_credits — colección de peticiones
+# Formato REST Client (VS Code, extensión "REST Client") — también compatible con
+# el cliente HTTP de IntelliJ usando los tokens como variables de entorno.
+#
+# Uso: ejecutar primero "Login usuario" y "Login admin"; el resto reutiliza los tokens.
+###############################################################################
+
+@baseUrl = http://localhost:8080/api
+@userToken = {{loginUser.response.body.data.token}}
+@adminToken = {{loginAdmin.response.body.data.token}}
+
+### ===================== AUTENTICACIÓN =====================
+
+# @name loginUser
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@test.com",
+  "password": "123"
+}
+
+###
+
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123"
+}
+
+### Usuario en sesión (rol y permisos vigentes)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{userToken}}
+
+### Credenciales incorrectas → 401
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@test.com",
+  "password": "incorrecta"
+}
+
+### ===================== TASAS Y SIMULACIÓN =====================
+
+### Tramos de tasa activos + límites de monto, plazo y tasa EA
+GET {{baseUrl}}/interest-rates
+Authorization: Bearer {{userToken}}
+
+### Simular con la tasa del tramo (24 meses → 22 % EA) incluyendo tabla de amortización
+POST {{baseUrl}}/credits/simulate
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "amount": 10000000,
+  "termMonths": 24
+}
+
+### Simular con tasa propia, sin tabla (24 % EA → 1,808758 % mensual; cuota 934.525,09)
+POST {{baseUrl}}/credits/simulate
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "amount": 10000000,
+  "termMonths": 12,
+  "annualRate": 24,
+  "includeSchedule": false
+}
+
+### ===================== CRÉDITOS DEL USUARIO =====================
+
+# @name requestCredit
+POST {{baseUrl}}/credits
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "amount": 12000000,
+  "termMonths": 24
+}
+
+###
+@creditId = {{requestCredit.response.body.data.id}}
+
+### Mis créditos (filtro opcional: PENDING | APPROVED | REJECTED | CANCELLED)
+GET {{baseUrl}}/credits/me?status=PENDING
+Authorization: Bearer {{userToken}}
+
+### Detalle / estado de un crédito (cacheado en EhCache)
+GET {{baseUrl}}/credits/{{creditId}}
+Authorization: Bearer {{userToken}}
+
+### Monto fuera de la política → 422
+POST {{baseUrl}}/credits
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "amount": 500000,
+  "termMonths": 24
+}
+
+### Formato inválido → 400 con error por campo
+POST {{baseUrl}}/credits
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "amount": -1
+}
+
+### El usuario intenta aprobar → 403
+PATCH {{baseUrl}}/admin/credits/{{creditId}}/approve
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "annualRate": 20
+}
+
+### ===================== ADMINISTRACIÓN DE CRÉDITOS =====================
+
+### Resumen por estado
+GET {{baseUrl}}/admin/credits/summary
+Authorization: Bearer {{adminToken}}
+
+### Bandeja paginada con búsqueda por nombre o correo
+GET {{baseUrl}}/admin/credits?status=PENDING&q=&page=0&size=10
+Authorization: Bearer {{adminToken}}
+
+### Aprobar fijando la tasa efectiva anual (transaccional; en paralelo → 409)
+PATCH {{baseUrl}}/admin/credits/{{creditId}}/approve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "annualRate": 20.5
+}
+
+### Aprobar de nuevo el mismo crédito → 409
+PATCH {{baseUrl}}/admin/credits/{{creditId}}/approve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "annualRate": 20.5
+}
+
+### Rechazar con motivo (usar el id de otra solicitud pendiente)
+PATCH {{baseUrl}}/admin/credits/1/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "reason": "Capacidad de pago insuficiente para el monto solicitado."
+}
+
+### ===================== TRAMOS DE TASA (ADMIN) =====================
+
+GET {{baseUrl}}/admin/interest-rates
+Authorization: Bearer {{adminToken}}
+
+### Tramo superpuesto con uno activo → 422
+POST {{baseUrl}}/admin/interest-rates
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Promocional",
+  "minTermMonths": 30,
+  "maxTermMonths": 40,
+  "annualEffectiveRate": 19.9
+}
+
+### Tramo inactivo (puede superponerse)
+POST {{baseUrl}}/admin/interest-rates
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Borrador campaña",
+  "minTermMonths": 6,
+  "maxTermMonths": 84,
+  "annualEffectiveRate": 19.9,
+  "active": false
+}
+
+### ===================== USUARIOS (ADMIN) =====================
+
+GET {{baseUrl}}/admin/roles
+Authorization: Bearer {{adminToken}}
+
+###
+GET {{baseUrl}}/admin/users?q=&role=USER&active=true&page=0&size=10
+Authorization: Bearer {{adminToken}}
+
+###
+# @name createUser
+POST {{baseUrl}}/admin/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Laura Gómez",
+  "email": "laura.gomez@test.com",
+  "password": "laura123",
+  "role": "USER"
+}
+
+###
+@newUserId = {{createUser.response.body.data.id}}
+
+### Editar sin cambiar la contraseña (password vacío = conservar)
+PUT {{baseUrl}}/admin/users/{{newUserId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Laura Gómez Díaz",
+  "email": "laura.gomez@test.com",
+  "role": "USER",
+  "active": true,
+  "password": ""
+}
+
+### Desactivar (ya no podrá iniciar sesión)
+PATCH {{baseUrl}}/admin/users/{{newUserId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "active": false
+}
+
+### El admin intenta desactivarse a sí mismo → 422
+PATCH {{baseUrl}}/admin/users/2/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "active": false
+}
+
+### Eliminar un usuario con créditos → 409 (se sugiere desactivar)
+DELETE {{baseUrl}}/admin/users/1
+Authorization: Bearer {{adminToken}}
+
+### Eliminar el usuario creado (sin créditos)
+DELETE {{baseUrl}}/admin/users/{{newUserId}}
+Authorization: Bearer {{adminToken}}
+
+### ===================== OBSERVABILIDAD =====================
+
+### Salud (público)
+GET http://localhost:8080/actuator/health
+
+### Cachés registradas (EhCache)
+GET http://localhost:8080/actuator/caches
+Authorization: Bearer {{adminToken}}
